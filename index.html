@@ -932,22 +932,29 @@ const easyQuestions = [
                 balloon.style.animation = `floatUp ${bDuration}s ease-in-out ${bDelay}s infinite`;
                 container.appendChild(balloon);
             }
-        }
+        }        // رابط قاعدة بيانات Firebase الخاصة بك
+        const FIREBASE_URL = "https://islamicmillion-328a1-default-rtdb.firebaseio.com/leaderboard.json";
 
-        // الحفظ التلقائي لكل جولة باستخدام اسم المستخدم الفريد
-        function autoSaveScore() {
-            let database = JSON.parse(localStorage.getItem('millionaire_db')) || {};
-            
-            if (!database[currentPlayer]) {
-                database[currentPlayer] = { bestScore: score, totalScore: score };
-            } else {
-                if (score > database[currentPlayer].bestScore) {
-                    database[currentPlayer].bestScore = score;
-                }
-                database[currentPlayer].totalScore += score;
+        // الحفظ السحابي التلقائي لكل جولة باستخدام اسم المستخدم الفريد
+        async function autoSaveScore() {
+            if (!currentPlayer) return;
+
+            const playerData = {
+                name: currentPlayer,
+                score: score,
+                date: new Date().toISOString()
+            };
+
+            try {
+                await fetch(FIREBASE_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(playerData),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                showToast('✅ تم تحديث ونشر نتيجتك سحابياً بنجاح!');
+            } catch (error) {
+                console.error("Error saving to cloud:", error);
             }
-
-            localStorage.setItem('millionaire_db', JSON.stringify(database));
         }
 
         function switchLeaderboardTab(tab) {
@@ -962,40 +969,63 @@ const easyQuestions = [
             document.getElementById('leaderboardModal').style.display = 'block';
         }
 
-        function renderLeaderboard() {
+        // دالة جلب وعرض المتصدرين من السحابة لجميع المستخدمين
+        async function renderLeaderboard() {
             const list = document.getElementById('leaderboardList');
-            let database = JSON.parse(localStorage.getItem('millionaire_db')) || {};
-            
-            let playersArray = Object.keys(database).map(name => {
-                return {
+            list.innerHTML = '<li style="text-align:center;">جاري جلب النتائج من السحابة... ⏳</li>';
+
+            try {
+                const response = await fetch(FIREBASE_URL);
+                const data = await response.json();
+
+                let database = {};
+
+                // تجميع النتائج لكل لاعب (حساب أفضل لعبة والرصيد التراكمي)
+                if (data) {
+                    Object.values(data).forEach(record => {
+                        if (!database[record.name]) {
+                            database[record.name] = { bestScore: record.score, totalScore: record.score };
+                        } else {
+                            if (record.score > database[record.name].bestScore) {
+                                database[record.name].bestScore = record.score;
+                            }
+                            database[record.name].totalScore += record.score;
+                        }
+                    });
+                }
+
+                let playersArray = Object.keys(database).map(name => ({
                     name: name,
-                    bestScore: database[name].bestScore || 0,
-                    totalScore: database[name].totalScore || 0
-                };
-            });
+                    bestScore: database[name].bestScore,
+                    totalScore: database[name].totalScore
+                }));
 
-            if (activeTab === 'best') {
-                playersArray.sort((a, b) => b.bestScore - a.bestScore);
-            } else {
-                playersArray.sort((a, b) => b.totalScore - a.totalScore);
-            }
+                if (activeTab === 'best') {
+                    playersArray.sort((a, b) => b.bestScore - a.bestScore);
+                } else {
+                    playersArray.sort((a, b) => b.totalScore - a.totalScore);
+                }
 
-            playersArray = playersArray.slice(0, 10);
+                playersArray = playersArray.slice(0, 10);
 
-            list.innerHTML = '';
-            if (playersArray.length === 0) {
-                list.innerHTML = '<li style="text-align:center;">لا توجد نتائج مسجلة بعد.</li>';
-            } else {
-                playersArray.forEach((player, index) => {
-                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
-                    let displayVal = activeTab === 'best' ? player.bestScore.toLocaleString() + ' حسنة' : player.totalScore.toLocaleString() + ' حسنة تجمعي';
-                    list.innerHTML += `
-                        <li class="leaderboard-item">
-                            <span>${medal} ${player.name}</span>
-                            <span style="color:var(--gold); font-weight:bold;">${displayVal}</span>
-                        </li>
-                    `;
-                });
+                list.innerHTML = '';
+                if (playersArray.length === 0) {
+                    list.innerHTML = '<li style="text-align:center;">لا توجد نتائج مسجلة سحابياً بعد.</li>';
+                } else {
+                    playersArray.forEach((player, index) => {
+                        let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
+                        let displayVal = activeTab === 'best' ? player.bestScore.toLocaleString() + ' حسنة' : player.totalScore.toLocaleString() + ' حسنة تجمعي';
+                        list.innerHTML += `
+                            <li class="leaderboard-item">
+                                <span>${medal} ${player.name}</span>
+                                <span style="color:var(--gold); font-weight:bold;">${displayVal}</span>
+                            </li>
+                        `;
+                    });
+                }
+            } catch (error) {
+                list.innerHTML = '<li style="text-align:center; color:red;">تعذر الاتصال بقاعدة البيانات السحابية.</li>';
+                console.error("Error fetching leaderboard:", error);
             }
         }
 
