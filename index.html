@@ -733,13 +733,22 @@ const easyQuestions = [
 
                 // دالة التسجيل والتحقق السحابي من عدم تكرار الاسم
         async function registerPlayer() {
-    const nameInput = document.getElementById('usernameInput').value.trim();
+    // مححث عن حقل الإدخال بأكثر من احتمال لضمان عدم توقفه
+    const inputElement = document.getElementById('usernameInput') || document.getElementById('nameInput') || document.querySelector('input');
+    
+    if (!inputElement) {
+        alert('خطأ: لم يتم العثور على حقل إدخال الاسم في الصفحة.');
+        return;
+    }
+
+    const nameInput = inputElement.value.trim();
     if (!nameInput) {
         showToast('⚠️ الرجاء إدخال اسم صحيح!');
         return;
     }
 
     try {
+        // محاولة التحقق من السحابة
         const response = await fetch(FIREBASE_URL);
         const data = await response.json();
 
@@ -756,18 +765,27 @@ const easyQuestions = [
             showToast('❌ هذا الاسم محجوز مسبقاً، يرجى اختيار اسم فريد آخر.');
             return;
         }
-
-        currentPlayer = nameInput;
-        localStorage.setItem('millionaire_current_user', currentPlayer);
-
-        document.getElementById('registerModal').style.display = 'none';
-        document.getElementById('playerBadge').innerText = currentPlayer;
-        showToast(`أهلاً بك يا ${currentPlayer}! 🎮`);
-        initGame();
-
     } catch (error) {
-        console.error("Error checking username:", error);
-        showToast('⚠️ حدث خطأ في الاتصال بالسحابة، حاول مرة أخرى.');
+        console.error("Cloud check skipped due to error:", error);
+        // في حال انقطع الاتصال، نسمح له بالمرور لكي لا تتعطل اللعبة
+    }
+
+    // اعتماد الاسم والانتقال للعبة في جميع الأحوال
+    currentPlayer = nameInput;
+    localStorage.setItem('millionaire_current_user', currentPlayer);
+
+    const modal = document.getElementById('registerModal');
+    if (modal) modal.style.display = 'none';
+
+    const badge = document.getElementById('playerBadge');
+    if (badge) badge.innerText = currentPlayer;
+
+    showToast(`أهلاً بك يا ${currentPlayer}! 🎮`);
+    
+    if (typeof initGame === 'function') {
+        initGame();
+    } else {
+        window.location.reload(); // إعادة تحميل للتأكد من بدء اللعبة
     }
 }
 
