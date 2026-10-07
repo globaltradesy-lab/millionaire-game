@@ -733,45 +733,43 @@ const easyQuestions = [
 
                 // دالة التسجيل والتحقق السحابي من عدم تكرار الاسم
         async function registerPlayer() {
-            const nameInput = document.getElementById('usernameInput').value.trim();
-            if (!nameInput) {
-                showToast('⚠️ الرجاء إدخال اسم صحيح!');
-                return;
-            }
+    const nameInput = document.getElementById('usernameInput').value.trim();
+    if (!nameInput) {
+        showToast('⚠️ الرجاء إدخال اسم صحيح!');
+        return;
+    }
 
-            try {
-                // جلب بيانات اللاعبين من السحابة للتأكد من عدم تكرار الاسم
-                const response = await fetch(FIREBASE_URL);
-                const data = await response.json();
+    try {
+        const response = await fetch(FIREBASE_URL);
+        const data = await response.json();
 
-                let nameExists = false;
-                if (data) {
-                    Object.values(data).forEach(record => {
-                        if (record.name && record.name.toLowerCase() === nameInput.toLowerCase()) {
-                            nameExists = true;
-                        }
-                    });
+        let nameExists = false;
+        if (data) {
+            Object.values(data).forEach(record => {
+                if (record.name && record.name.toLowerCase() === nameInput.toLowerCase()) {
+                    nameExists = true;
                 }
-
-                if (nameExists) {
-                    showToast('❌ هذا الاسم محجوز مسبقاً، يرجى اختيار اسم فريد آخر.');
-                    return;
-                }
-
-                // اعتماد الاسم وحفظه محلياً للانتقال للعبة
-                currentPlayer = nameInput;
-                localStorage.setItem('millionaire_current_user', currentPlayer);
-
-                document.getElementById('registerModal').style.display = 'none';
-                document.getElementById('playerBadge').innerText = currentPlayer;
-                showToast(`أهلاً بك يا ${currentPlayer}! 🎮`);
-                initGame();
-
-            } catch (error) {
-                console.error("Error checking username:", error);
-                showToast('⚠️ حدث خطأ في الاتصال بالسحابة، حاول مرة أخرى.');
-            }
+            });
         }
+
+        if (nameExists) {
+            showToast('❌ هذا الاسم محجوز مسبقاً، يرجى اختيار اسم فريد آخر.');
+            return;
+        }
+
+        currentPlayer = nameInput;
+        localStorage.setItem('millionaire_current_user', currentPlayer);
+
+        document.getElementById('registerModal').style.display = 'none';
+        document.getElementById('playerBadge').innerText = currentPlayer;
+        showToast(`أهلاً بك يا ${currentPlayer}! 🎮`);
+        initGame();
+
+    } catch (error) {
+        console.error("Error checking username:", error);
+        showToast('⚠️ حدث خطأ في الاتصال بالسحابة، حاول مرة أخرى.');
+    }
+}
 
 
         function initGame() {
