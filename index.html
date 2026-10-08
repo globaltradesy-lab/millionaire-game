@@ -242,8 +242,19 @@
         <div class="modal-content">
             <h2 style="color: var(--gold)">👤 تسجيل اللاعب</h2>
             <p style="margin: 15px 0; color: var(--text-muted);">أدخل اسماً فريداً ومميزاً لك (يُستخدم لجميع جولاتك وللوحة المتصدرين):</p>
-            <input type="text" id="regPlayerName" placeholder="اسم المستخدم الفريد" maxlength="20">
+            <input type="text" id="usernameInput" placeholder="اسم المستخدم الفريد" maxlength="20">
             <br>
+            <div id="registerModal" class="modal">
+    <div class="modal-content">
+        <h2>تسجيل الدخول / إنشاء حساب</h2>
+        <input type="text" id="usernameInput" placeholder="أدخل اسمك" required>
+        <!-- هذا هو السطر الجديد لكلمة المرور -->
+        <input type="password" id="passwordInput" placeholder="أدخل كلمة المرور" required>
+        
+        <button onclick="registerPlayer()">دخول للعبة</button>
+    </div>
+</div>
+
             <button class="btn" style="margin-top: 15px;" onclick="registerPlayer()">🚀 بدء اللعبة</button>
             <div class="signature">مع تحيات المهندس عبدالله الحسن</div>
         </div>
@@ -732,62 +743,77 @@ const easyQuestions = [
         };
 
                 // دالة التسجيل والتحقق السحابي من عدم تكرار الاسم
-        async function registerPlayer() {
-    // مححث عن حقل الإدخال بأكثر من احتمال لضمان عدم توقفه
-    const inputElement = document.getElementById('usernameInput') || document.getElementById('nameInput') || document.querySelector('input');
-    
-    if (!inputElement) {
-        alert('خطأ: لم يتم العثور على حقل إدخال الاسم في الصفحة.');
-        return;
-    }
+        // رابط جديد مخصص لحفظ أسماء وكلمات مرور اللاعبين
+const FIREBASE_USERS_URL = "https://islamicmillion-328a1-default-rtdb.firebaseio.com/users.json";
 
-    const nameInput = inputElement.value.trim();
-    if (!nameInput) {
-        showToast('⚠️ الرجاء إدخال اسم صحيح!');
+async function registerPlayer() {
+    const nameInput = document.getElementById('usernameInput').value.trim();
+    const passInput = document.getElementById('passwordInput').value.trim(); // قراءة كلمة المرور
+
+    if (!nameInput || !passInput) {
+        showToast('⚠️ الرجاء إدخال الاسم وكلمة المرور!');
         return;
     }
 
     try {
-        // محاولة التحقق من السحابة
-        const response = await fetch(FIREBASE_URL);
-        const data = await response.json();
+        // جلب قائمة اللاعبين من السحابة
+        const response = await fetch(FIREBASE_USERS_URL);
+        const usersData = await response.json();
 
-        let nameExists = false;
-        if (data) {
-            Object.values(data).forEach(record => {
-                if (record.name && record.name.toLowerCase() === nameInput.toLowerCase()) {
-                    nameExists = true;
+        let userExists = false;
+        let passwordMatch = false;
+
+        // البحث هل الاسم مسجل مسبقاً؟
+        if (usersData) {
+            Object.values(usersData).forEach(user => {
+                if (user.name && user.name.toLowerCase() === nameInput.toLowerCase()) {
+                    userExists = true;
+                    if (user.password === passInput) {
+                        passwordMatch = true; // كلمة المرور صحيحة
+                    }
                 }
             });
         }
 
-        if (nameExists) {
-            showToast('❌ هذا الاسم محجوز مسبقاً، يرجى اختيار اسم فريد آخر.');
-            return;
+        if (userExists) {
+            if (!passwordMatch) {
+                showToast('❌ كلمة المرور غير صحيحة لهذا الاسم!');
+                return; // إيقاف الدخول إذا كانت الكلمة خاطئة
+            }
+            showToast(`مرحباً بعودتك يا ${nameInput}! 🎮`);
+        } else {
+            // إذا كان الاسم جديداً، يتم تسجيله مع كلمة المرور في السحابة
+            const newUser = { name: nameInput, password: passInput };
+            await fetch(FIREBASE_USERS_URL, {
+                method: 'POST',
+                body: JSON.stringify(newUser),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            showToast(`✅ تم إنشاء حسابك الجديد بنجاح!`);
         }
+
+        // اعتماد الاسم والانتقال للعبة
+        currentPlayer = nameInput;
+        localStorage.setItem('millionaire_current_user', currentPlayer);
+
+        const modal = document.getElementById('registerModal');
+        if (modal) modal.style.display = 'none';
+
+        const badge = document.getElementById('playerBadge');
+        if (badge) badge.innerText = currentPlayer;
+
+        if (typeof initGame === 'function') {
+            initGame();
+        } else {
+            window.location.reload();
+        }
+
     } catch (error) {
-        console.error("Cloud check skipped due to error:", error);
-        // في حال انقطع الاتصال، نسمح له بالمرور لكي لا تتعطل اللعبة
-    }
-
-    // اعتماد الاسم والانتقال للعبة في جميع الأحوال
-    currentPlayer = nameInput;
-    localStorage.setItem('millionaire_current_user', currentPlayer);
-
-    const modal = document.getElementById('registerModal');
-    if (modal) modal.style.display = 'none';
-
-    const badge = document.getElementById('playerBadge');
-    if (badge) badge.innerText = currentPlayer;
-
-    showToast(`أهلاً بك يا ${currentPlayer}! 🎮`);
-    
-    if (typeof initGame === 'function') {
-        initGame();
-    } else {
-        window.location.reload(); // إعادة تحميل للتأكد من بدء اللعبة
+        console.error("Error:", error);
+        showToast('⚠️ حدث خطأ في الاتصال، حاول مرة أخرى.');
     }
 }
+
 
 
         function initGame() {
