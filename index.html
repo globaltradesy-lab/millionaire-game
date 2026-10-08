@@ -238,13 +238,22 @@
     </div>
 
     <!-- نافذة تسجيل الاسم لأول مرة -->
-    <div class="modal" id="registerModal" style="disp...
-<div class="modal-content">
-<h2 style="color: var(--gold)">...
-... (وكل الأسطر التي بينها) ...
-<div class="signature">مع تحيات المهندس عبدالله الحسن</div>
+<!-- نافذة تسجيل الاسم وكلمة المرور -->
+<div class="modal" id="registerModal" style="display: flex;">
+    <div class="modal-content">
+        <h2 style="color: var(--gold)">تسجيل اللاعب 👤</h2>
+        <p style="margin: 15px 0; color: #ccc;">أدخل اسماً فريداً وكلمة مرور لحفظ نتائجك:</p>
+
+        <input type="text" id="usernameInput" placeholder="أدخل اسمك" required style="width: 80%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; background: #1e1e2f; color: #fff; text-align: center; font-size: 16px; font-family: inherit;">
+
+        <input type="password" id="passwordInput" placeholder="أدخل كلمة المرور" required style="width: 80%; padding: 12px; margin-bottom: 25px; border-radius: 8px; border: 1px solid #444; background: #1e1e2f; color: #fff; text-align: center; font-size: 16px; font-family: inherit;">
+
+        <button class="btn" style="width: 80%; font-size: 18px;" onclick="registerPlayer()">بدء اللعبة 🚀</button>
+
+        <div class="signature" style="margin-top: 20px; font-weight: bold; color: var(--gold);">مع تحيات المهندس عبدالله الحسن</div>
+    </div>
 </div>
-</div>
+
 
     </div>
 
